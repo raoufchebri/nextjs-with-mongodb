@@ -6,6 +6,7 @@ interface Movie {
     title: string;
     metacritic: number;
     plot: string;
+    cast: string[]; // Added cast property
 }
 
 interface MoviesProps {
@@ -25,6 +26,12 @@ const Movies: React.FC<MoviesProps> = ({ movies }) => {
                         <h2>{movie.title}</h2>
                         <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
+                        <h4>Cast:</h4>
+                        <ul>
+                            {movie.cast.map((actor, index) => (
+                                <li key={index}>{actor}</li>
+                            ))}
+                        </ul>
                     </li>
                 ))}
             </ul>
