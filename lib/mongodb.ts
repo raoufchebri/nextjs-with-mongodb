@@ -1,30 +1,31 @@
-import { MongoClient } from "mongodb";
+import { Client } from "pg";
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
+if (!process.env.POSTGRESQL_URI) {
+  throw new Error('Invalid/Missing environment variable: "POSTGRESQL_URI"');
 }
 
-const uri = process.env.MONGODB_URI;
-const options = {};
+const uri = process.env.POSTGRESQL_URI;
 
-let client: MongoClient;
+let client: Client;
 
 if (process.env.NODE_ENV === "development") {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof globalThis & {
-    _mongoClient?: MongoClient;
+  let globalWithPostgres = global as typeof globalThis & {
+    _postgresClient?: Client;
   };
 
-  if (!globalWithMongo._mongoClient) {
-    globalWithMongo._mongoClient = new MongoClient(uri, options);
+  if (!globalWithPostgres._postgresClient) {
+    globalWithPostgres._postgresClient = new Client({ connectionString: uri });
+    globalWithPostgres._postgresClient.connect();
   }
-  client = globalWithMongo._mongoClient;
+  client = globalWithPostgres._postgresClient;
 } else {
   // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
+  client = new Client({ connectionString: uri });
+  client.connect();
 }
 
-// Export a module-scoped MongoClient. By doing this in a
+// Export a module-scoped Client. By doing this in a
 // separate module, the client can be shared across functions.
 export default client;
