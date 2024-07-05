@@ -1,9 +1,8 @@
-import { ObjectId } from "mongodb";
-import client from "../lib/mongodb";
+import { Pool } from 'pg';
 import { GetStaticProps } from "next";
 
 interface Movie {
-    _id: ObjectId;
+    id: number;
     title: string;
     metacritic: number;
     plot: string;
@@ -22,7 +21,7 @@ export default function Top({ movies }: TopProps) {
             </p>
             <ul>
                 {movies.map((movie) => (
-                    <li key={movie._id.toString()}>
+                    <li key={movie.id}>
                         <h2>{movie.title}</h2>
                         <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
@@ -34,23 +33,30 @@ export default function Top({ movies }: TopProps) {
 }
 
 export const getStaticProps: GetStaticProps<TopProps> = async () => {
-    try {
-        const db = client.db("sample_mflix");
+    const pool = new Pool({
+        connectionString: process.env.POSTGRESQL_URI,
+    });
 
-        const movies = await db
-            .collection("movies")
-            .find({})
-            .sort({ metacritic: -1 })
-            .limit(1000)
-            .toArray();
+    try {
+        const client = await pool.connect();
+        const res = await client.query(`
+            SELECT id, title, metacritic, plot
+            FROM movies
+            ORDER BY metacritic DESC
+            LIMIT 1000;
+        `);
+        const movies = res.rows;
+        client.release();
 
         return {
-            props: { movies: JSON.parse(JSON.stringify(movies)) },
+            props: { movies },
         };
     } catch (e) {
         console.error(e);
         return {
             props: { movies: [] },
         };
+    } finally {
+        await pool.end();
     }
 };
