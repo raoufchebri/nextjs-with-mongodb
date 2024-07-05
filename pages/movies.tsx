@@ -1,8 +1,8 @@
-import client from "../lib/mongodb";
+import { query } from "../lib/postgresClient";
 import { GetServerSideProps } from 'next';
 
 interface Movie {
-    _id: string;
+    id: string;
     title: string;
     metacritic: number;
     plot: string;
@@ -22,7 +22,7 @@ const Movies: React.FC<MoviesProps> = ({ movies }) => {
             </p>
             <ul>
                 {movies.map((movie) => (
-                    <li key={movie._id}>
+                    <li key={movie.id}>
                         <h2>{movie.title}</h2>
                         <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
@@ -43,13 +43,26 @@ export default Movies;
 
 export const getServerSideProps: GetServerSideProps = async () => {
     try {
-        const db = client.db("sample_mflix");
-        const movies = await db
-            .collection("movies")
-            .find({})
-            .sort({ metacritic: -1 })
-            .limit(20)
-            .toArray();
+        const result = await query(`
+            SELECT
+                movies.id,
+                movies.title,
+                movies.metacritic,
+                movies.plot,
+                array_agg(cast_members.name) AS cast
+            FROM
+                movies
+            LEFT JOIN
+                movie_cast ON movies.id = movie_cast.movie_id
+            LEFT JOIN
+                cast_members ON movie_cast.cast_member_id = cast_members.id
+            GROUP BY
+                movies.id
+            ORDER BY
+                movies.metacritic DESC
+            LIMIT 20;
+        `);
+        const movies = result.rows;
         return {
             props: { movies: JSON.parse(JSON.stringify(movies)) },
         };
