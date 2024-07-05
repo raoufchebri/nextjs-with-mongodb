@@ -1,34 +1,37 @@
 import Head from "next/head";
-import client from "../lib/mongodb";
+import { Client } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import type { InferGetServerSidePropsType, GetServerSideProps } from "next";
+import * as schema from '../schema.drizzle';
 
 type ConnectionStatus = {
   isConnected: boolean;
 };
 
-export const getServerSideProps: GetServerSideProps<
-  ConnectionStatus
-> = async () => {
-  try {
+export const getServerSideProps: GetServerSideProps<ConnectionStatus> = async () => {
+    const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+    });
     await client.connect();
-    // `await client.connect()` will use the default database passed in the MONGODB_URI
-    // However you can use another database (e.g. myDatabase) by replacing the `await clientPromise` with the following code:
-    //
-    // `const client = await clientPromise`
-    // `const db = client.db("myDatabase")`
-    //
-    // Then you can execute queries against your database like so:
-    // db.find({}) or any of the MongoDB Node Driver commands
+    const db = drizzle(client, { schema });
 
-    return {
-      props: { isConnected: true },
-    };
-  } catch (e) {
-    console.error(e);
-    return {
-      props: { isConnected: false },
-    };
-  }
+    try {
+        // Simple query to check PostgreSQL connection status
+        await db.query.movies.findMany({
+            limit: 1,
+        });
+
+        return {
+            props: { isConnected: true },
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            props: { isConnected: false },
+        };
+    } finally {
+        await client.end();
+    }
 };
 
 export default function Home({
