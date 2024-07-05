@@ -1,12 +1,12 @@
-import client from "../lib/mongodb";
 import { GetServerSideProps } from 'next';
+import { Pool } from 'pg';
 
 interface Movie {
-    _id: string;
+    id: number;
     title: string;
     metacritic: number;
     plot: string;
-    cast: string[]; // Added cast property
+    cast: string[];
 }
 
 interface MoviesProps {
@@ -22,7 +22,7 @@ const Movies: React.FC<MoviesProps> = ({ movies }) => {
             </p>
             <ul>
                 {movies.map((movie) => (
-                    <li key={movie._id}>
+                    <li key={movie.id}>
                         <h2>{movie.title}</h2>
                         <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
@@ -42,19 +42,29 @@ const Movies: React.FC<MoviesProps> = ({ movies }) => {
 export default Movies;
 
 export const getServerSideProps: GetServerSideProps = async () => {
+    const pool = new Pool({
+        connectionString: process.env.POSTGRESQL_URI,
+    });
+
     try {
-        const db = client.db("sample_mflix");
-        const movies = await db
-            .collection("movies")
-            .find({})
-            .sort({ metacritic: -1 })
-            .limit(20)
-            .toArray();
+        const client = await pool.connect();
+        const res = await client.query(`
+            SELECT movies.id, movies.title, movies.metacritic, movies.plot, array_agg(cast_members.name) as cast
+            FROM movies
+            LEFT JOIN cast_members ON movies.id = cast_members.movie_id
+            GROUP BY movies.id
+            ORDER BY movies.metacritic DESC
+            LIMIT 20;
+        `);
+        const movies = res.rows;
+        client.release();
         return {
-            props: { movies: JSON.parse(JSON.stringify(movies)) },
+            props: { movies },
         };
     } catch (e) {
         console.error(e);
         return { props: { movies: [] } };
+    } finally {
+        await pool.end();
     }
 };
