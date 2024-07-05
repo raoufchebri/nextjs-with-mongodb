@@ -68,5 +68,7 @@ export const getStaticProps: GetStaticProps<TopProps> = async () => {
         return {
             props: { movies: [] },
         };
+    } finally {
+        await client.end();
     }
 };

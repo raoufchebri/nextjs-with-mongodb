@@ -3,6 +3,7 @@ import { Client } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { InferGetServerSidePropsType, GetServerSideProps } from "next";
 import * as schema from '../schema.drizzle';
+import { Pool } from 'pg';
 
 type ConnectionStatus = {
   isConnected: boolean;
