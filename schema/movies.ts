@@ -18,5 +18,5 @@ export const movies = pgTable('movies', {
   imdb: jsonb('imdb'),
   countries: jsonb('countries'),
   type: text('type'),
-  tomatoes: jsonb('tomatoes'),
+  tomatoes: jsonb('tomatoes')
 });

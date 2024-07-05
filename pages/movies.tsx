@@ -1,12 +1,49 @@
-import client from "../lib/mongodb";
+import db from "../lib/postgresql";
 import { GetServerSideProps } from 'next';
+import { movies } from '../schema/movies';
+import { eq } from 'drizzle-orm';
 
 interface Movie {
-    _id: string;
+    id: number;
     title: string;
-    metacritic: number;
-    plot: string;
-    cast: string[]; // Added cast property
+    plot: string | null;
+    genres: string[];
+    runtime: number | null;
+    poster: string | null;
+    fullplot: string | null;
+    languages: string[];
+    released: Date | null;
+    directors: string[];
+    rated: string | null;
+    awards: {
+        wins: number;
+        nominations: number;
+        text: string;
+    };
+    lastupdated: Date | null;
+    year: number;
+    imdb: {
+        rating: number;
+        votes: number;
+        id: number;
+    };
+    countries: string[];
+    type: string;
+    tomatoes: {
+        viewer: {
+            rating: number;
+            numReviews: number;
+            meter: number;
+        };
+        fresh: number;
+        critic: {
+            rating: number;
+            numReviews: number;
+            meter: number;
+        };
+        rotten: number;
+        lastUpdated: Date | null;
+    };
 }
 
 interface MoviesProps {
@@ -22,14 +59,13 @@ const Movies: React.FC<MoviesProps> = ({ movies }) => {
             </p>
             <ul>
                 {movies.map((movie) => (
-                    <li key={movie._id}>
+                    <li key={movie.id}>
                         <h2>{movie.title}</h2>
-                        <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
-                        <h4>Cast:</h4>
+                        <h4>Genres:</h4>
                         <ul>
-                            {movie.cast.map((actor, index) => (
-                                <li key={index}>{actor}</li>
+                            {movie.genres.map((genre, index) => (
+                                <li key={index}>{genre}</li>
                             ))}
                         </ul>
                     </li>
@@ -43,15 +79,29 @@ export default Movies;
 
 export const getServerSideProps: GetServerSideProps = async () => {
     try {
-        const db = client.db("sample_mflix");
-        const movies = await db
-            .collection("movies")
-            .find({})
-            .sort({ metacritic: -1 })
-            .limit(20)
-            .toArray();
+        const moviesData: Movie[] = await db.select({
+            id: movies.id,
+            title: movies.title,
+            plot: movies.plot,
+            genres: movies.genres,
+            runtime: movies.runtime,
+            poster: movies.poster,
+            fullplot: movies.fullplot,
+            languages: movies.languages,
+            released: movies.released,
+            directors: movies.directors,
+            rated: movies.rated,
+            awards: movies.awards,
+            lastupdated: movies.lastupdated,
+            year: movies.year,
+            imdb: movies.imdb,
+            countries: movies.countries,
+            type: movies.type,
+            tomatoes: movies.tomatoes
+        }).from(movies).orderBy(movies.id).limit(20);
+
         return {
-            props: { movies: JSON.parse(JSON.stringify(movies)) },
+            props: { movies: moviesData },
         };
     } catch (e) {
         console.error(e);
