@@ -6,14 +6,18 @@
     "start": "next start"
   },
   "dependencies": {
-    "mongodb": "^4.8.1",
+    "drizzle-orm": "^0.31.2",
     "next": "latest",
+    "pg": "^8.12.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/node": "18.7.5",
-    "@types/react": "16.9.17",
+    "@types/next": "^9.0.0",
+    "@types/node": "^18.7.5",
+    "@types/pg": "^8.11.6",
+    "@types/react": "^18.3.3",
+    "drizzle-kit": "^0.22.8",
     "typescript": "4.6.3"
   }
 }

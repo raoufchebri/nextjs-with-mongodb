@@ -1,12 +1,15 @@
-import { ObjectId } from "mongodb";
-import client from "../lib/mongodb";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Client } from 'pg';
 import { GetStaticProps } from "next";
+import { movies as moviesTable, casts } from '../schema.drizzle';
+import { eq, desc } from 'drizzle-orm';
 
 interface Movie {
-    _id: ObjectId;
+    id: number;
     title: string;
     metacritic: number;
     plot: string;
+    cast: string[];
 }
 
 interface TopProps {
@@ -22,7 +25,7 @@ export default function Top({ movies }: TopProps) {
             </p>
             <ul>
                 {movies.map((movie) => (
-                    <li key={movie._id.toString()}>
+                    <li key={movie.id}>
                         <h2>{movie.title}</h2>
                         <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
@@ -34,23 +37,38 @@ export default function Top({ movies }: TopProps) {
 }
 
 export const getStaticProps: GetStaticProps<TopProps> = async () => {
-    try {
-        const db = client.db("sample_mflix");
+    const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+    });
+    await client.connect();
+    const db = drizzle(client);
 
-        const movies = await db
-            .collection("movies")
-            .find({})
-            .sort({ metacritic: -1 })
+    try {
+        const moviesData: any = await db
+            .select()
+            .from(moviesTable)
+            .leftJoin(casts, eq(casts.movie_id, moviesTable.id))
+            .orderBy(desc(moviesTable.metacritic))
             .limit(1000)
-            .toArray();
+            .execute();
+
+        const movies: Movie[] = moviesData.map((movie: any) => ({
+            id: movie.movies.id,
+            title: movie.movies.title,
+            metacritic: movie.movies.metacritic,
+            plot: movie.movies.plot,
+            cast: movie.casts.map((cast: any) => cast.actor_name),
+        }));
 
         return {
-            props: { movies: JSON.parse(JSON.stringify(movies)) },
+            props: { movies },
         };
     } catch (e) {
         console.error(e);
         return {
             props: { movies: [] },
         };
+    } finally {
+        await client.end();
     }
 };
