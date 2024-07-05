@@ -57,12 +57,13 @@ export const getServerSideProps: GetServerSideProps = async () => {
             FROM movies
             LEFT JOIN movie_cast ON movies.id = movie_cast.movie_id
             LEFT JOIN cast_members ON movie_cast.cast_id = cast_members.id
-            GROUP BY movies.id
+            GROUP BY movies.id, movies.title, movies.metacritic, movies.plot
             ORDER BY movies.metacritic DESC
             LIMIT 20;
         `);
 
         const movies = res.rows;
+        console.log("Fetched movies data:", movies); // Add logging to inspect the data
 
         return {
             props: { movies },
