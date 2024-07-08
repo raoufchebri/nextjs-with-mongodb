@@ -1,12 +1,12 @@
-import { ObjectId } from "mongodb";
-import client from "../lib/mongodb";
+import { Client } from 'pg';
 import { GetStaticProps } from "next";
 
 interface Movie {
-    _id: ObjectId;
+    id: number;
     title: string;
     metacritic: number;
     plot: string;
+    cast: string[];
 }
 
 interface TopProps {
@@ -22,7 +22,7 @@ export default function Top({ movies }: TopProps) {
             </p>
             <ul>
                 {movies.map((movie) => (
-                    <li key={movie._id.toString()}>
+                    <li key={movie.id}>
                         <h2>{movie.title}</h2>
                         <h3>{movie.metacritic}</h3>
                         <p>{movie.plot}</p>
@@ -34,21 +34,29 @@ export default function Top({ movies }: TopProps) {
 }
 
 export const getStaticProps: GetStaticProps<TopProps> = async () => {
+    const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+    });
+
     try {
-        const db = client.db("sample_mflix");
-
-        const movies = await db
-            .collection("movies")
-            .find({})
-            .sort({ metacritic: -1 })
-            .limit(1000)
-            .toArray();
-
+        await client.connect();
+        const res = await client.query(`
+            SELECT movies.id, movies.title, movies.metacritic, movies.plot, array_agg(movie_cast_members.name) AS cast
+            FROM movies
+            LEFT JOIN movie_cast ON movies.id = movie_cast.movie_id
+            LEFT JOIN movie_cast_members ON movie_cast.cast_id = movie_cast_members.id
+            GROUP BY movies.id
+            ORDER BY movies.metacritic DESC
+            LIMIT 1000
+        `);
+        const movies = res.rows;
+        await client.end();
         return {
-            props: { movies: JSON.parse(JSON.stringify(movies)) },
+            props: { movies },
         };
     } catch (e) {
         console.error(e);
+        await client.end();
         return {
             props: { movies: [] },
         };
